@@ -1,0 +1,606 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>ShieldKit</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column of pixel-window panels (title bar with three dots, hard offset shadow) under a tab strip: Detect, Prevent, Respond, Learn, About */
+:root {
+  --bg: #fbeaea;
+  --panel: #fff8f8;
+  --ink: #140c0d;
+  --muted: #6a4d50;
+  --line: #140c0d;
+  --red: #d42a2a;
+  --on-red: #ffffff;
+  --red-soft: #f6c9c9;
+  --ok: #1b7a4a;
+  --ok-soft: #d5eedd;
+  --warn: #9a5b00;
+  --warn-soft: #f7e3bc;
+  --shade: #140c0d;
+  --f-display: "Chakra Petch", "Arial Narrow", sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #120a0b; --panel: #1d1213; --ink: #f7eaea; --muted: #be9fa2; --line: #6e3438;
+    --red: #ff5252; --on-red: #1a0707; --red-soft: #3a1517; --ok: #5bd08e; --ok-soft: #12301f;
+    --warn: #f0b450; --warn-soft: #3a2a0c; --shade: #2a1012; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #120a0b; --panel: #1d1213; --ink: #f7eaea; --muted: #be9fa2; --line: #6e3438;
+  --red: #ff5252; --on-red: #1a0707; --red-soft: #3a1517; --ok: #5bd08e; --ok-soft: #12301f;
+  --warn: #f0b450; --warn-soft: #3a2a0c; --shade: #2a1012; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.6; }
+.wrap { max-width: 760px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px 56px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; line-height: 1.1; }
+h1 { font-size: clamp(44px, 12vw, 72px); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 20px; font-weight: 600; }
+h3 { font-size: 15px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+p { margin: 0; }
+.top { display: grid; gap: 10px; margin-bottom: 22px; }
+.eyebrow { font-family: var(--f-display); font-weight: 600; font-size: 13px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--red); display: flex; align-items: center; gap: 10px; }
+.eyebrow::after { content: ""; width: 44px; height: 4px; background: var(--red); }
+.lede { max-width: 56ch; color: var(--muted); }
+.tabs { display: flex; gap: 8px; overflow-x: auto; padding: 2px 6px 10px 2px; margin-bottom: 14px; scrollbar-width: thin; }
+.tab { flex: none; font-family: var(--f-display); font-weight: 600; font-size: 14px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink); background: var(--panel); border: 2px solid var(--line); padding: 8px 14px; cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--red); color: var(--on-red); border-color: var(--line); }
+.tab:focus-visible, .btn:focus-visible, .chip:focus-visible, .opt:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid var(--red); outline-offset: 2px; }
+.panel { display: grid; gap: 22px; }
+.win { border: 2px solid var(--line); background: var(--panel); box-shadow: 5px 5px 0 var(--shade); min-width: 0; }
+.win-bar { display: flex; align-items: center; gap: 12px; padding: 7px 12px; background: var(--red); color: var(--on-red); font-family: var(--f-display); font-weight: 600; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; }
+.dots { display: flex; gap: 5px; }
+.dots i { width: 8px; height: 8px; border: 1.5px solid currentColor; display: block; }
+.win-body { padding: 16px; display: grid; gap: 14px; min-width: 0; }
+label, .label { font-family: var(--f-display); font-weight: 600; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }
+.hint { color: var(--muted); font-size: 13px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: stretch; }
+.row > input { flex: 1 1 220px; min-width: 0; }
+input[type="text"], input[type="password"] { width: 100%; font-family: var(--f-mono); font-size: 14px; color: var(--ink); background: var(--bg); border: 2px solid var(--line); border-radius: 0; padding: 11px 12px; }
+input[type="range"] { width: 100%; accent-color: var(--red); }
+.btn { font-family: var(--f-display); font-weight: 600; font-size: 14px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink); background: var(--panel); border: 2px solid var(--line); padding: 10px 16px; cursor: pointer; box-shadow: 3px 3px 0 var(--shade); }
+.btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--shade); }
+.btn.primary { background: var(--red); color: var(--on-red); }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { font-family: var(--f-mono); font-size: 12px; color: var(--ink); background: transparent; border: 1.5px dashed var(--muted); padding: 5px 9px; cursor: pointer; max-width: 100%; overflow-wrap: anywhere; text-align: left; }
+.chip:hover { border-style: solid; border-color: var(--red); }
+.verdict { display: grid; gap: 10px; }
+.verdict-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.badge { font-family: var(--f-display); font-weight: 700; font-size: 22px; letter-spacing: 0.04em; text-transform: uppercase; }
+.badge.low { color: var(--ok); } .badge.mid { color: var(--warn); } .badge.high { color: var(--red); }
+.score { font-family: var(--f-mono); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bar { height: 14px; border: 2px solid var(--line); background: var(--bg); position: relative; }
+.bar > span { display: block; height: 100%; }
+.bar.low > span { background: var(--ok); } .bar.mid > span { background: var(--warn); } .bar.high > span { background: var(--red); }
+.bar::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 9px, var(--panel) 9px 11px); }
+.find { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.find li { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 10px 12px; border: 1.5px solid var(--line); background: var(--bg); }
+.find b { font-weight: 500; }
+.find .pts { font-family: var(--f-mono); font-size: 13px; color: var(--red); font-variant-numeric: tabular-nums; }
+.find .why { grid-column: 1 / -1; color: var(--muted); font-size: 13px; }
+.note { padding: 10px 12px; border-left: 4px solid var(--line); background: var(--bg); font-size: 14px; }
+.note.ok { border-color: var(--ok); } .note.warn { border-color: var(--warn); } .note.bad { border-color: var(--red); }
+.err { color: var(--red); font-size: 14px; }
+.pwrow { position: relative; display: flex; gap: 8px; }
+.pwrow input { flex: 1; min-width: 0; }
+.meter { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.meter i { height: 12px; background: var(--bg); border: 2px solid var(--line); display: block; }
+.meter.bad i.on { background: var(--red); } .meter.warn i.on { background: var(--warn); } .meter.ok i.on { background: var(--ok); }
+.stats { display: flex; gap: 10px 28px; flex-wrap: wrap; }
+.stat { display: grid; gap: 0; min-width: 0; }
+.stat .k { font-size: 12px; color: var(--muted); font-family: var(--f-display); letter-spacing: 0.08em; text-transform: uppercase; }
+.stat .v { font-family: var(--f-mono); font-size: 16px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 14px; }
+.checks li { display: flex; gap: 10px; align-items: baseline; }
+.checks .m { font-family: var(--f-mono); width: 1.2em; flex: none; color: var(--muted); }
+.checks li.pass .m { color: var(--ok); } .checks li.fail .m { color: var(--red); }
+.gen { font-family: var(--f-mono); font-size: 17px; padding: 12px; border: 2px dashed var(--line); background: var(--bg); overflow-wrap: anywhere; user-select: all; }
+.opts { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; font-size: 14px; }
+.opts label { font-family: var(--f-body); font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 14px; display: flex; gap: 6px; align-items: center; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; counter-reset: s; }
+.steps li { border: 1.5px solid var(--line); background: var(--bg); }
+.steps label { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; padding: 12px; cursor: pointer; font-family: var(--f-body); font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 14px; align-items: start; }
+.steps input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--red); }
+.steps b { font-family: var(--f-display); font-size: 15px; letter-spacing: 0.02em; }
+.steps li.done b { text-decoration: line-through; color: var(--muted); }
+.steps .d { grid-column: 2; color: var(--muted); }
+.qmeta { display: flex; justify-content: space-between; gap: 12px; font-family: var(--f-mono); font-size: 12px; color: var(--muted); }
+.qtext { font-family: var(--f-display); font-size: 19px; font-weight: 500; line-height: 1.3; overflow-wrap: anywhere; }
+.optlist { display: grid; gap: 10px; }
+.opt { text-align: left; font-family: var(--f-body); font-size: 15px; color: var(--ink); background: var(--bg); border: 2px solid var(--line); padding: 12px; cursor: pointer; overflow-wrap: anywhere; }
+.opt:hover:not(:disabled) { border-color: var(--red); }
+.opt.right { background: var(--ok-soft); border-color: var(--ok); }
+.opt.wrong { background: var(--red-soft); border-color: var(--red); }
+.opt:disabled { cursor: default; color: var(--ink); }
+.final { display: grid; gap: 10px; justify-items: start; }
+.final .big { font-family: var(--f-display); font-size: 48px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.about p + p { margin-top: 10px; }
+.about ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 6px; }
+.about code { font-family: var(--f-mono); font-size: 13px; background: var(--bg); padding: 1px 5px; border: 1px solid var(--line); }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.col { border: 1.5px solid var(--line); background: var(--bg); padding: 12px; display: grid; gap: 4px; align-content: start; }
+.col h3 { color: var(--red); }
+a { color: var(--red); text-underline-offset: 3px; }
+footer { margin-top: 28px; color: var(--muted); font-size: 12px; font-family: var(--f-mono); }
+@media (prefers-reduced-motion: no-preference) { .bar > span, .meter i { transition: width 0.25s ease, background 0.25s ease; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <p class="eyebrow">Hack the Hackers</p>
+    <h1>ShieldKit</h1>
+    <p class="lede">Detect a fake link, test a password, learn the traps and know what to do after a hit. Everything runs on fixed rules in your browser. No AI.</p>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="ShieldKit tools">
+    <button class="tab" role="tab" data-tab="detect" id="t-detect">Detect</button>
+    <button class="tab" role="tab" data-tab="prevent" id="t-prevent">Prevent</button>
+    <button class="tab" role="tab" data-tab="respond" id="t-respond">Respond</button>
+    <button class="tab" role="tab" data-tab="learn" id="t-learn">Learn</button>
+    <button class="tab" role="tab" data-tab="about" id="t-about">About</button>
+  </nav>
+
+  <section class="panel" id="p-detect" data-panel="detect" role="tabpanel" aria-labelledby="t-detect">
+    <div class="win">
+      <div class="win-bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>Link checker</div>
+      <div class="win-body">
+        <label for="url">Paste a link from an SMS, email or chat</label>
+        <div class="row">
+          <input id="url" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://example.com/login">
+          <button class="btn primary" id="check" type="button">Check link</button>
+        </div>
+        <div class="chips" id="examples" aria-label="Example links"></div>
+        <p class="hint" id="linkHint">Example loaded. Replace it with a link you want to check. The link is never opened or sent anywhere.</p>
+        <div id="linkResult" aria-live="polite"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-prevent" data-panel="prevent" role="tabpanel" aria-labelledby="t-prevent" hidden>
+    <div class="win">
+      <div class="win-bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>Password tester</div>
+      <div class="win-body">
+        <label for="pw">Type a password to test</label>
+        <div class="pwrow">
+          <input id="pw" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" value="Summer2024!">
+          <button class="btn" id="showpw" type="button" aria-pressed="false">Show</button>
+        </div>
+        <p class="hint">Example password loaded. Test one that is similar to yours, not the real thing, if you prefer. Nothing is stored or sent.</p>
+        <div id="pwResult" aria-live="polite"></div>
+      </div>
+    </div>
+    <div class="win">
+      <div class="win-bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>Password generator</div>
+      <div class="win-body">
+        <div class="gen" id="genOut" aria-live="polite"></div>
+        <div class="opts">
+          <label for="genLen" class="label">Length <span id="genLenOut" style="font-family:var(--f-mono)">16</span></label>
+        </div>
+        <input id="genLen" type="range" min="12" max="32" step="1" value="16">
+        <div class="opts">
+          <label for="genSym"><input id="genSym" type="checkbox" checked> Include symbols</label>
+        </div>
+        <div class="row">
+          <button class="btn primary" id="genBtn" type="button">Generate</button>
+          <button class="btn" id="copyBtn" type="button">Copy</button>
+        </div>
+        <p class="hint" id="copyMsg" aria-live="polite">Built with your browser's secure random number source.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-respond" data-panel="respond" role="tabpanel" aria-labelledby="t-respond" hidden>
+    <div class="win">
+      <div class="win-bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>If you think you were hacked</div>
+      <div class="win-body">
+        <p>Work through these in order. Tick each one as you go.</p>
+        <ol class="steps" id="steps"></ol>
+        <p class="hint" id="stepCount"></p>
+        <p class="note">Helpline and portal below are for India. Elsewhere, use your country's cybercrime reporting service.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-learn" data-panel="learn" role="tabpanel" aria-labelledby="t-learn" hidden>
+    <div class="win">
+      <div class="win-bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>Scam spotter quiz</div>
+      <div class="win-body" id="quiz"></div>
+    </div>
+  </section>
+
+  <section class="panel about" id="p-about" data-panel="about" role="tabpanel" aria-labelledby="t-about" hidden>
+    <div class="win">
+      <div class="win-bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>What ShieldKit is</div>
+      <div class="win-body">
+        <p>ShieldKit is a small awareness toolkit for the "Hack the Hackers" theme. It helps ordinary people detect phishing links, prevent weak passwords, respond after a hit, and learn the tricks scammers use.</p>
+        <div class="cols">
+          <div class="col"><h3>Detect</h3><p>Scores a link against known phishing habits.</p></div>
+          <div class="col"><h3>Prevent</h3><p>Tests passwords and makes strong ones.</p></div>
+          <div class="col"><h3>Respond</h3><p>A clear order of steps after an attack.</p></div>
+          <div class="col"><h3>Learn</h3><p>Eight short scam scenarios with answers.</p></div>
+        </div>
+      </div>
+    </div>
+    <div class="win">
+      <div class="win-bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>Why it is not AI</div>
+      <div class="win-body">
+        <p>Nothing here learns, guesses or generates answers. Each result comes from rules a person wrote down and you can read.</p>
+        <ul>
+          <li>The link checker adds points for fixed warning signs, such as <code>http</code> instead of <code>https</code>, a raw IP address, an <code>@</code> in the address, look-alike letters, or words like "verify" and "login".</li>
+          <li>The password tester counts character types and length, checks a short list of common passwords and simple patterns, then does the arithmetic for how many guesses it would take.</li>
+          <li>The same input always gives the same answer. There is no model, no training data and no server. The page works offline once loaded.</li>
+          <li>Your links and passwords stay in this page and are gone when you close it.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="win">
+      <div class="win-bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>What it cannot do</div>
+      <div class="win-body">
+        <ul>
+          <li>It cannot look up whether a site is on a live blocklist, so a low score is not a promise that a link is safe.</li>
+          <li>Its password time estimate assumes a thief with a stolen database and fast hardware. Real attacks vary.</li>
+          <li>When a message feels wrong, trust that and contact the company through its app or a number you already have.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>ShieldKit runs entirely in this page. Rule-based, no AI.</footer>
+</div>
+
+<script>
+/*PURE_START*/
+var BRANDS = {
+  paypal: ["paypal.com"], google: ["google.com", "google.co.in"], amazon: ["amazon.com", "amazon.in"],
+  microsoft: ["microsoft.com", "live.com"], apple: ["apple.com"], facebook: ["facebook.com"],
+  instagram: ["instagram.com"], whatsapp: ["whatsapp.com"], netflix: ["netflix.com"], flipkart: ["flipkart.com"],
+  paytm: ["paytm.com"], phonepe: ["phonepe.com"], sbi: ["sbi.co.in", "onlinesbi.sbi", "onlinesbi.com"],
+  hdfcbank: ["hdfcbank.com"], icicibank: ["icicibank.com"]
+};
+var SHORTENERS = ["bit.ly", "tinyurl.com", "t.co", "goo.gl", "is.gd", "cutt.ly", "rb.gy", "ow.ly", "shorturl.at"];
+var RISKY_TLDS = ["zip", "mov", "xyz", "top", "tk", "ml", "ga", "cf", "gq", "click", "country", "work", "support", "loan", "icu", "buzz"];
+var KEYWORDS = ["login", "signin", "verify", "secure", "account", "update", "confirm", "password", "wallet", "bank", "otp", "kyc", "claim", "reward", "gift", "prize", "free"];
+
+function registrable(host) {
+  var l = host.split(".");
+  if (l.length <= 2) return host;
+  var sl = l[l.length - 2], tld = l[l.length - 1];
+  if (tld.length === 2 && ["co", "com", "org", "net", "gov", "ac", "edu"].indexOf(sl) !== -1) return l.slice(-3).join(".");
+  return l.slice(-2).join(".");
+}
+
+function analyzeLink(raw) {
+  var s = String(raw || "").trim();
+  if (!s) return { error: "Paste a link first." };
+  var hasScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(s);
+  var u;
+  try { u = new URL(hasScheme ? s : "https://" + s); } catch (e) { return { error: "That does not look like a link. Check for spaces or missing parts." }; }
+  if (!/^https?:$/.test(u.protocol)) return { error: "Only http and https links can be checked." };
+  var host = u.hostname.toLowerCase();
+  var isIp = /^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.charAt(0) === "[";
+  if (!isIp && host.indexOf(".") === -1) return { error: "Add a full domain, such as example.com." };
+  var f = [];
+  function add(pts, title, why) { f.push({ pts: pts, title: title, why: why }); }
+
+  if (hasScheme && u.protocol === "http:") add(20, "Not encrypted", "The link starts with http. Pages that ask you to sign in should use https.");
+  if (isIp) add(35, "Address is a number", "Real services use names, not raw IP addresses.");
+  if (u.username || u.password) add(30, "Hidden destination", "Text before an @ is ignored by the browser. The real site is the part after it.");
+  if (host.indexOf("xn--") !== -1) add(30, "Look-alike characters", "The domain uses special characters that can imitate normal letters.");
+  var labels = host.split(".");
+  if (!isIp && labels.length > 4) add(15, "Too many subdomains", "Long chains of dots can bury the real domain in the middle.");
+  if (s.length > 75) add(10, "Very long link", "Long links can hide where they really lead.");
+  if ((host.match(/-/g) || []).length >= 3) add(10, "Many hyphens in the domain", "Phishing domains often chain words with hyphens.");
+  if (SHORTENERS.indexOf(host) !== -1) add(20, "Shortened link", "You cannot see the destination before opening it.");
+  var tld = labels[labels.length - 1];
+  if (!isIp && RISKY_TLDS.indexOf(tld) !== -1) add(15, "Ending often used in scams", "The ." + tld + " ending is cheap to register and common in phishing.");
+  if (u.port && u.port !== "80" && u.port !== "443") add(10, "Unusual port", "Real sign-in pages rarely use a custom port number.");
+  var hay = host + u.pathname.toLowerCase();
+  var hits = KEYWORDS.filter(function (k) { return hay.indexOf(k) !== -1; });
+  if (hits.length) add(Math.min(24, hits.length * 8), "Pressure words", "Found: " + hits.join(", ") + ". Scam pages lean on words like these.");
+  if (/https?%3a|https?:\/\//i.test(u.pathname + u.search)) add(15, "Another link inside the link", "A redirect can send you to a different site than the one shown.");
+
+  if (!isIp) {
+    var reg = registrable(host);
+    var tokens = host.split(/[.\-]/);
+    var norm = host.replace(/0/g, "o").replace(/1/g, "l").replace(/3/g, "e").replace(/5/g, "s");
+    var normTokens = norm.split(/[.\-]/);
+    var found = false;
+    Object.keys(BRANDS).forEach(function (b) {
+      if (found) return;
+      var real = BRANDS[b].indexOf(reg) !== -1;
+      var direct = tokens.indexOf(b) !== -1 || (b.length >= 6 && host.indexOf(b) !== -1);
+      var fake = !direct && (normTokens.indexOf(b) !== -1 || (b.length >= 6 && norm.indexOf(b) !== -1));
+      if (direct && !real) { add(35, "Pretends to be " + b, "The name appears, but the domain belongs to " + reg + ", not " + b + ".") ; found = true; }
+      else if (fake) { add(35, "Look-alike of " + b, "Numbers are swapped in for letters so " + host + " resembles " + b + ".") ; found = true; }
+    });
+  }
+  var score = Math.min(100, f.reduce(function (a, x) { return a + x.pts; }, 0));
+  var level = score < 25 ? "low" : score < 60 ? "mid" : "high";
+  return { host: host, score: score, level: level, findings: f };
+}
+
+var COMMON_STEMS = ["password", "passw0rd", "qwerty", "admin", "welcome", "letmein", "iloveyou", "123456", "abc123", "111111", "000000", "dragon", "monkey", "football", "sunshine", "princess"];
+function leet(s) { return s.replace(/@/g, "a").replace(/\$/g, "s").replace(/0/g, "o").replace(/3/g, "e").replace(/4/g, "a").replace(/5/g, "s").replace(/7/g, "t"); }
+function hasSequence(s) {
+  var rows = ["qwertyuiop", "asdfghjkl", "zxcvbnm", "0123456789", "abcdefghijklmnopqrstuvwxyz"];
+  for (var i = 0; i + 3 <= s.length; i++) {
+    var tri = s.substr(i, 3), rev = tri.split("").reverse().join("");
+    for (var r = 0; r < rows.length; r++) if (rows[r].indexOf(tri) !== -1 || rows[r].indexOf(rev) !== -1) return true;
+  }
+  return false;
+}
+function formatTime(sec) {
+  if (sec < 1) return "less than a second";
+  if (sec < 60) return Math.round(sec) + " seconds";
+  if (sec < 3600) return Math.round(sec / 60) + " minutes";
+  if (sec < 86400) return Math.round(sec / 3600) + " hours";
+  var days = sec / 86400;
+  if (days < 365) return Math.round(days) + " days";
+  var y = days / 365.25;
+  if (y < 1000) return Math.round(y).toLocaleString("en-IN") + " years";
+  if (y < 1e6) return Math.round(y / 1000).toLocaleString("en-IN") + " thousand years";
+  if (y < 1e9) return Math.round(y / 1e6).toLocaleString("en-IN") + " million years";
+  return "billions of years";
+}
+function analyzePassword(p) {
+  if (!p) return null;
+  var lower = p.toLowerCase(), nl = leet(lower);
+  var has = { l: /[a-z]/.test(p), u: /[A-Z]/.test(p), d: /\d/.test(p), s: /[^A-Za-z0-9]/.test(p) };
+  var pool = (has.l ? 26 : 0) + (has.u ? 26 : 0) + (has.d ? 10 : 0) + (has.s ? 33 : 0);
+  var bits = p.length * Math.log2(pool || 1);
+  var common = COMMON_STEMS.some(function (c) { return lower.indexOf(c) !== -1 || nl.indexOf(c) !== -1; });
+  var repeated = /(.)\1{2,}/.test(p);
+  var seq = hasSequence(lower);
+  var wordEnd = /^[A-Za-z]{3,}[0-9!@#$%^&*._-]{1,6}$/.test(p);
+  if (repeated) bits -= 10;
+  if (seq) bits -= 10;
+  if (wordEnd) bits = Math.min(bits, 30);
+  if (common) bits = Math.min(bits, 18);
+  bits = Math.max(bits, 0);
+  var seconds = Math.pow(2, bits) / 2 / 1e10;
+  var level = bits < 28 ? 1 : bits < 36 ? 2 : bits < 60 ? 3 : bits < 80 ? 4 : 5;
+  var labels = ["", "Very weak", "Weak", "Fair", "Strong", "Very strong"];
+  return {
+    bits: bits, seconds: seconds, level: level, label: labels[level], length: p.length,
+    checks: [
+      { ok: p.length >= 12, text: "At least 12 characters" },
+      { ok: has.l && has.u, text: "Upper and lower case letters" },
+      { ok: has.d, text: "At least one number" },
+      { ok: has.s, text: "At least one symbol" },
+      { ok: !common, text: "Not built on a common password" },
+      { ok: !repeated && !seq, text: "No repeated characters or simple sequences" },
+      { ok: !wordEnd, text: "Not a plain word with numbers or a symbol added at the end" }
+    ]
+  };
+}
+/*PURE_END*/
+
+function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+function $(id) { return document.getElementById(id); }
+
+/* ---------- Tabs ---------- */
+var TABS = ["detect", "prevent", "respond", "learn", "about"];
+function showTab() {
+  var h = location.hash.slice(1);
+  if (TABS.indexOf(h) === -1) h = "detect";
+  document.querySelectorAll("[data-panel]").forEach(function (p) { p.hidden = p.getAttribute("data-panel") !== h; });
+  document.querySelectorAll("[data-tab]").forEach(function (b) {
+    var on = b.getAttribute("data-tab") === h;
+    b.setAttribute("aria-selected", on ? "true" : "false");
+    b.tabIndex = on ? 0 : -1;
+  });
+}
+document.querySelectorAll("[data-tab]").forEach(function (b) {
+  b.addEventListener("click", function () { location.hash = b.getAttribute("data-tab"); showTab(); });
+});
+window.addEventListener("hashchange", showTab);
+showTab();
+
+/* ---------- Link checker ---------- */
+var EXAMPLES = [
+  "http://paypa1-secure-login.top/verify?acct=1",
+  "https://www.paypal.com/signin",
+  "http://192.168.4.7/bank/login",
+  "https://sbi-kyc-update.xyz/verify"
+];
+var ADVICE = {
+  low: ["ok", "No strong warning signs. Still, go to the site by typing its address or using its app if you are about to enter money or password details."],
+  mid: ["warn", "Some warning signs. Do not sign in or pay through this link. Open the company's own app or website instead."],
+  high: ["bad", "Looks like a phishing link. Do not open it, do not enter anything, and delete the message."]
+};
+function renderLink(r) {
+  var box = $("linkResult"); box.textContent = "";
+  if (r.error) { box.appendChild(el("p", "err", r.error)); return; }
+  var v = el("div", "verdict");
+  var head = el("div", "verdict-head");
+  var names = { low: "Low risk", mid: "Suspicious", high: "High risk" };
+  head.appendChild(el("span", "badge " + r.level, names[r.level]));
+  head.appendChild(el("span", "score", "risk " + r.score + " / 100 · " + r.host));
+  v.appendChild(head);
+  var bar = el("div", "bar " + r.level); var fill = el("span"); fill.style.width = r.score + "%"; bar.appendChild(fill); v.appendChild(bar);
+  var a = ADVICE[r.level]; v.appendChild(el("p", "note " + a[0], a[1]));
+  if (r.findings.length) {
+    var ul = el("ul", "find");
+    r.findings.forEach(function (x) {
+      var li = el("li");
+      li.appendChild(el("b", null, x.title));
+      li.appendChild(el("span", "pts", "+" + x.pts));
+      li.appendChild(el("span", "why", x.why));
+      ul.appendChild(li);
+    });
+    v.appendChild(ul);
+  } else {
+    v.appendChild(el("p", "hint", "No warning signs were triggered by this link."));
+  }
+  box.appendChild(v);
+}
+function runCheck() { $("linkHint").textContent = "The link is never opened or sent anywhere."; renderLink(analyzeLink($("url").value)); }
+$("check").addEventListener("click", runCheck);
+$("url").addEventListener("keydown", function (e) { if (e.key === "Enter") runCheck(); });
+EXAMPLES.forEach(function (ex) {
+  var c = el("button", "chip", ex); c.type = "button";
+  c.addEventListener("click", function () { $("url").value = ex; renderLink(analyzeLink(ex)); });
+  $("examples").appendChild(c);
+});
+$("url").value = EXAMPLES[0];
+renderLink(analyzeLink(EXAMPLES[0]));
+
+/* ---------- Password tester ---------- */
+function renderPw() {
+  var box = $("pwResult"); box.textContent = "";
+  var r = analyzePassword($("pw").value);
+  if (!r) { box.appendChild(el("p", "hint", "Start typing to see how long it would take to crack.")); return; }
+  var tone = r.level <= 2 ? "bad" : r.level === 3 ? "warn" : "ok";
+  var wrap = el("div", "verdict");
+  var head = el("div", "verdict-head");
+  var cls = r.level <= 2 ? "high" : r.level === 3 ? "mid" : "low";
+  head.appendChild(el("span", "badge " + cls, r.label));
+  wrap.appendChild(head);
+  var m = el("div", "meter " + tone);
+  for (var i = 1; i <= 5; i++) m.appendChild(el("i", i <= r.level ? "on" : ""));
+  wrap.appendChild(m);
+  var st = el("div", "stats");
+  [["Length", r.length + " characters"], ["Strength", Math.round(r.bits) + " bits"], ["Time to crack", formatTime(r.seconds)]].forEach(function (x) {
+    var s = el("div", "stat"); s.appendChild(el("span", "k", x[0])); s.appendChild(el("span", "v", x[1])); st.appendChild(s);
+  });
+  wrap.appendChild(st);
+  var ul = el("ul", "checks");
+  r.checks.forEach(function (c) {
+    var li = el("li", c.ok ? "pass" : "fail");
+    li.appendChild(el("span", "m", c.ok ? "+" : "x")); li.appendChild(el("span", null, c.text)); ul.appendChild(li);
+  });
+  wrap.appendChild(ul);
+  wrap.appendChild(el("p", "hint", "Estimate assumes a thief with a stolen database trying ten billion guesses a second."));
+  box.appendChild(wrap);
+}
+$("pw").addEventListener("input", renderPw);
+$("showpw").addEventListener("click", function () {
+  var inp = $("pw"), show = inp.type === "password";
+  inp.type = show ? "text" : "password";
+  this.textContent = show ? "Hide" : "Show";
+  this.setAttribute("aria-pressed", show ? "true" : "false");
+});
+renderPw();
+
+/* ---------- Password generator ---------- */
+function randInt(n) {
+  var max = Math.floor(4294967296 / n) * n, buf = new Uint32Array(1);
+  do { crypto.getRandomValues(buf); } while (buf[0] >= max);
+  return buf[0] % n;
+}
+function generate(len, symbols) {
+  var sets = ["abcdefghijkmnopqrstuvwxyz", "ABCDEFGHJKLMNPQRSTUVWXYZ", "23456789"];
+  if (symbols) sets.push("!@#$%^&*-_=+?");
+  var all = sets.join(""), out = [];
+  sets.forEach(function (s) { out.push(s.charAt(randInt(s.length))); });
+  while (out.length < len) out.push(all.charAt(randInt(all.length)));
+  for (var i = out.length - 1; i > 0; i--) { var j = randInt(i + 1), t = out[i]; out[i] = out[j]; out[j] = t; }
+  return out.join("");
+}
+function makePw() { $("genOut").textContent = generate(parseInt($("genLen").value, 10), $("genSym").checked); $("copyMsg").textContent = "Built with your browser's secure random number source."; }
+$("genBtn").addEventListener("click", makePw);
+$("genLen").addEventListener("input", function () { $("genLenOut").textContent = this.value; makePw(); });
+$("genSym").addEventListener("change", makePw);
+$("copyBtn").addEventListener("click", function () {
+  var text = $("genOut").textContent;
+  function fallback() {
+    var r = document.createRange(); r.selectNodeContents($("genOut"));
+    var sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    $("copyMsg").textContent = "Selected. Press and hold to copy.";
+  }
+  try {
+    navigator.clipboard.writeText(text).then(function () { $("copyMsg").textContent = "Copied to clipboard."; }, fallback);
+  } catch (e) { fallback(); }
+});
+makePw();
+
+/* ---------- Respond checklist ---------- */
+var STEPS = [
+  ["Disconnect the device", "If you installed something you do not trust or gave remote access to a stranger, turn off Wi-Fi and mobile data first."],
+  ["Change the password from a clean device", "Use a different phone or computer. Then change the password of every other account that used the same one."],
+  ["Turn on two-step verification and sign out everywhere", "An authenticator app is safer than SMS codes. Use the 'sign out of all devices' option in the account's security settings."],
+  ["Call your bank if money or cards are involved", "Block the card or UPI access. In India, also call the National Cybercrime Helpline on 1930 as early as you can."],
+  ["Report it and keep proof", "File a report at cybercrime.gov.in. Keep screenshots, messages, phone numbers and transaction IDs."],
+  ["Warn your contacts", "If your account sent links or asked for money, tell friends and family on another channel so they ignore those messages."]
+];
+function renderSteps() {
+  var ol = $("steps"); ol.textContent = "";
+  STEPS.forEach(function (s, i) {
+    var li = el("li"); var lab = el("label");
+    var cb = el("input"); cb.type = "checkbox"; cb.id = "step" + i;
+    var b = el("b", null, (i + 1) + ". " + s[0]);
+    var d = el("span", "d");
+    if (i === 4) { d.appendChild(document.createTextNode("File a report at ")); var a = el("a", null, "cybercrime.gov.in"); a.href = "https://cybercrime.gov.in"; a.target = "_blank"; a.rel = "noopener"; d.appendChild(a); d.appendChild(document.createTextNode(". Keep screenshots, messages, phone numbers and transaction IDs.")); }
+    else d.textContent = s[1];
+    cb.addEventListener("change", function () { li.className = cb.checked ? "done" : ""; countSteps(); });
+    lab.appendChild(cb); lab.appendChild(b); lab.appendChild(d);
+    li.appendChild(lab); ol.appendChild(li);
+  });
+  countSteps();
+}
+function countSteps() {
+  var done = document.querySelectorAll("#steps input:checked").length;
+  $("stepCount").textContent = done + " of " + STEPS.length + " done";
+}
+renderSteps();
+
+/* ---------- Quiz ---------- */
+var QUIZ = [
+  { q: "An SMS says your bank account will be blocked today unless you update KYC at sbi-kyc-update.top/verify.", o: ["Tap the link and update quickly", "Open your bank's official app, or call the number on your card", "Reply to the SMS to ask if it is real"], a: 1, e: "Banks do not ask for KYC through links in SMS. Using the app or the number printed on your card avoids the fake page entirely." },
+  { q: "A caller says they are from your bank and asks for the OTP to cancel a wrong transaction.", o: ["Share it, since they know your name", "Share only the first three digits", "Hang up. An OTP is only for you"], a: 2, e: "An OTP approves a payment or a login. A real bank never needs it from you, and partial digits still help the attacker." },
+  { q: "A cafe offers free Wi-Fi with no password and you need to check your bank balance.", o: ["Go ahead, banking apps are secure", "Use your mobile data instead", "Connect, then clear your history"], a: 1, e: "Fake hotspots can show look-alike login pages and capture what you type. Mobile data keeps your login off a network you cannot vouch for." },
+  { q: "You use one password for email, shopping and social media. What reduces the risk most?", o: ["Add a different number at the end for each site", "Change it every week", "A unique password for each account, kept in a password manager"], a: 2, e: "When one site leaks, attackers try the same password everywhere. Unique passwords keep the damage to one account. Predictable patterns get guessed." },
+  { q: "Your manager emails at 6 pm asking you to buy gift cards for a client and send the codes. The address looks right.", o: ["Buy them now, it is urgent", "Reply asking for more details", "Confirm by calling or messaging them on a channel you already use"], a: 2, e: "Urgency plus an unusual payment method is the standard pattern. Replying to the same email talks to the attacker, so check on a separate channel." },
+  { q: "A pop-up says your phone has 5 viruses and tells you to install a cleaner now.", o: ["Install it to be safe", "Close the tab and do not install anything", "Tap the pop-up to read the details"], a: 1, e: "Real security tools do not announce themselves through web pop-ups. Tapping or installing is how the actual malware gets in." },
+  { q: "Which of these links really belongs to PayPal?", o: ["paypal.com.secure-login.xyz/signin", "paypa1.com/signin", "www.paypal.com/signin"], a: 2, e: "The owner is the domain just before the first slash. The first link belongs to secure-login.xyz and the second swaps an l for a 1." },
+  { q: "A friend messages \"Is this you in this video?\" with a link. They have never sent links like this before.", o: ["Open it, you are curious", "Forward it to others as a warning", "Message them on another app or call to check"], a: 2, e: "Their account is probably taken over. Check on another channel and do not spread the link, even as a warning." }
+];
+var qs = { i: 0, score: 0, order: [], answered: false };
+function shuffle(a) { for (var i = a.length - 1; i > 0; i--) { var j = randInt(i + 1), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+function renderQuiz() {
+  var box = $("quiz"); box.textContent = "";
+  if (qs.i >= QUIZ.length) {
+    var f = el("div", "final");
+    f.appendChild(el("span", "label", "Your score"));
+    f.appendChild(el("span", "big", qs.score + " / " + QUIZ.length));
+    var msg = qs.score >= 7 ? "Hard to fool. Share these habits with someone who gets a lot of forwards." : qs.score >= 5 ? "Getting sharp. Review the explanations you missed." : "Worth another pass. Scammers count on these exact moments.";
+    f.appendChild(el("p", null, msg));
+    var again = el("button", "btn primary", "Play again"); again.type = "button";
+    again.addEventListener("click", function () { qs = { i: 0, score: 0, order: [], answered: false }; renderQuiz(); });
+    f.appendChild(again); box.appendChild(f); return;
+  }
+  var item = QUIZ[qs.i];
+  qs.order = shuffle(item.o.map(function (t, k) { return { t: t, ok: k === item.a }; }));
+  qs.answered = false;
+  var meta = el("div", "qmeta"); meta.appendChild(el("span", null, "Question " + (qs.i + 1) + " of " + QUIZ.length)); meta.appendChild(el("span", null, "Score " + qs.score));
+  box.appendChild(meta);
+  box.appendChild(el("p", "qtext", item.q));
+  var list = el("div", "optlist");
+  var fb = el("div"); fb.setAttribute("aria-live", "polite");
+  qs.order.forEach(function (op) {
+    var b = el("button", "opt", op.t); b.type = "button";
+    b.addEventListener("click", function () {
+      if (qs.answered) return; qs.answered = true;
+      var btns = list.querySelectorAll(".opt");
+      btns.forEach(function (x, k) { x.disabled = true; if (qs.order[k].ok) x.classList.add("right"); });
+      if (op.ok) qs.score++; else b.classList.add("wrong");
+      fb.appendChild(el("p", "note " + (op.ok ? "ok" : "bad"), (op.ok ? "Correct. " : "Not quite. ") + item.e));
+      var nx = el("button", "btn primary", qs.i === QUIZ.length - 1 ? "See score" : "Next question"); nx.type = "button";
+      nx.style.marginTop = "12px";
+      nx.addEventListener("click", function () { qs.i++; renderQuiz(); });
+      fb.appendChild(nx); nx.focus();
+    });
+    list.appendChild(b);
+  });
+  box.appendChild(list); box.appendChild(fb);
+}
+renderQuiz();
+</script>
+
+</body></html>
